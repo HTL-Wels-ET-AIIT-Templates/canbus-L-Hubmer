@@ -79,6 +79,8 @@ int main(void)
 	LCD_DisplayStringAtLineMode(39, "copyright CAN Experts!", CENTER_MODE);
 
 	// ToDo: set up CAN peripherals
+	canInit();
+
 
 
 
@@ -89,9 +91,12 @@ int main(void)
 		HAL_Delay(10);
 
 		// ToDo: send data over CAN when user button has been pressed
-
-
-
+		if(GetUserButtonPressed())
+		{
+			canSendTask();
+			HAL_Delay(100);
+		}
+		canReceiveTask();
 		// ToDo: check if data has been received
 
 
