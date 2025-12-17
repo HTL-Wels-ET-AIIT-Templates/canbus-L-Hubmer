@@ -8,6 +8,7 @@
 #include "uart.h"
 #include "main.h"
 #include "ringbuffer.h"
+#include "can.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -23,8 +24,6 @@
 
 static UART_HandleTypeDef uartHandle;
 static volatile char rxChar = 0;
-static bool Flm_User = 0;
-static uint32_t Time_Counter = 0;
 char Tc_String[32];
 
 RingBuffer_t USART6_Recieve;
@@ -38,7 +37,7 @@ static void uartSendByte(uint8_t byte);
 static void uartSendString(char *buffer);
 static void uartSendData(uint8_t *data, unsigned int size);
 static int GetUserButtonPressed(void);
-void uartSendMsgIfAvailable(RingBuffer_t MsgBuffer);
+void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer);
 
 
 
@@ -59,42 +58,61 @@ void uartInit(void) {
  * @param None
  * @retval None
  */
-void uartSendMsgIfAvailable(RingBuffer_t MsgBuffer)
+void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer)
 {
-	if(ringBufferLen(&MsgBuffer) > 0)
+	if(ringBufferLen(MsgBuffer) > 0)
 	{
-		char nextChar = ringBufferGetOne(&MsgBuffer);
-		switch(ringBufferGetOne(&MsgBuffer))
+		LCD_SetPrintPosition(20, 1);
+		LCD_SetTextColor(LCD_COLOR_WHITE);
+		char nextChar = ringBufferGetOne(MsgBuffer);
+
+		if(nextChar == 0)
+			return;
+
+		switch(nextChar)
 		{
 		case 13:
 			break;
 
 		case 228:
-			uartSendByte('a');
-			uartSendByte('e');
+			printf("ae");
 			break;
 
 		case 246:
-			uartSendByte('o');
-			uartSendByte('e');
+			printf("oe");
 			break;
 
 		case 252:
-			uartSendByte('u');
-			uartSendByte('e');
+			printf("ae");
 			break;
 
 		default:
-			uartSendByte(nextChar);
+			printf("%c  ",nextChar);
 			break;
 		}
+		uartSendByte(nextChar);
 	}
+	HAL_Delay(100);
+
 }
-void uartTask(int* timer){
+void uartTask(){
 	// TODO: What has to be done in our main loop?
 
 	if(ringBufferLen(&USART6_Recieve) > 0)
 	{
+		if(rxChar == 13)
+		{
+			//Start Transmission
+			canSendBegin("Lukas");
+			for(int i = 1; ringBufferLen(&USART6_Recieve) > 0; i++)
+			{
+				canSendLetter(ringBufferGetOne(&USART6_Recieve), i);
+			}
+			canSendEnd();
+
+
+		}
+		/*
 		switch(ringBufferGetOne(&USART6_Recieve))
 		{
 		case 13:
@@ -116,16 +134,8 @@ void uartTask(int* timer){
 			printf("%c",rxChar);
 			break;
 		}
+		*/
 	}
-
-	if(*timer >= 1000)
-	{
-		Time_Counter++;
-		sprintf(Tc_String, "%li ", Time_Counter);
-		uartSendString(Tc_String);
-		*timer = 0;
-	}
-
 }
 
 /**

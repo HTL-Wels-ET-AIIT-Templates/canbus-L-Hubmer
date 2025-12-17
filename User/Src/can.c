@@ -12,6 +12,7 @@
 #include "main.h"
 #include "stm32f429i_discovery_lcd.h"
 #include "tempsensor.h"
+#include "ringbuffer.h"
 
 /* Private define ------------------------------------------------------------*/
 #define CAN1_CLOCK_PRESCALER  16   // Adjust for correct bitrate
@@ -119,18 +120,78 @@ void canSendTask(void) {
 	}
 }
 
-void canSendLetter(void) {
+void canSendLetter(char Letter, uint16_t check_number) {
 	static unsigned int sendCnt = 0;
-	char Letter = 'c';
 
 	/* Prepare CAN header */
-	txHeader.StdId = 0x1001;
+	txHeader.StdId = 0x003;
+	txHeader.IDE   = CAN_ID_STD;
+	txHeader.RTR   = CAN_RTR_DATA;
+	txHeader.DLC   = 3;
+
+	/* Data payload (temperature) */
+	txData[0] = Letter;
+	txData[1] = ((uint8_t)check_number >> 8) & 0xFF;
+	txData[2] = (uint8_t)check_number & 0xFF;
+
+
+
+	/* Send CAN frame */
+	if (HAL_CAN_AddTxMessage(&canHandle, &txHeader, txData, &txMailbox) == HAL_OK) {
+		sendCnt++;
+
+		/* Display send counter */
+		LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
+		LCD_SetPrintPosition(5,15);
+		printf("%5d", sendCnt);
+
+		/* Display temperature sent */
+		LCD_SetPrintPosition(9,1);
+		printf("Send-Data: %c",txData[0]);
+	}
+}
+
+void canSendBegin(char Sender[8]) {
+	static unsigned int sendCnt = 0;
+
+	/* Prepare CAN header */
+	txHeader.StdId = 0x001;
+	txHeader.IDE   = CAN_ID_STD;
+	txHeader.RTR   = CAN_RTR_DATA;
+	txHeader.DLC   = 8;
+
+	/* Data payload (temperature) */
+	for( int i = 0; i < 8; i++)
+	{
+		txData[i] = Sender[i];
+	}
+
+
+	/* Send CAN frame */
+	if (HAL_CAN_AddTxMessage(&canHandle, &txHeader, txData, &txMailbox) == HAL_OK) {
+		sendCnt++;
+
+		/* Display send counter */
+		LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
+		LCD_SetPrintPosition(5,15);
+		printf("%5d", sendCnt);
+
+		/* Display temperature sent */
+		LCD_SetPrintPosition(9,1);
+		printf("Send-Data: %c",txData[0]);
+	}
+}
+void canSendEnd() {
+	static unsigned int sendCnt = 0;
+
+	/* Prepare CAN header */
+	txHeader.StdId = 0x002;
 	txHeader.IDE   = CAN_ID_STD;
 	txHeader.RTR   = CAN_RTR_DATA;
 	txHeader.DLC   = 1;
 
 	/* Data payload (temperature) */
-	txData[0] = Letter;      //
+	txData[0] = 'E';
 
 
 	/* Send CAN frame */
@@ -150,8 +211,9 @@ void canSendLetter(void) {
 /**
  * Task: Receive CAN messages if available
  */
-void canReceiveTask(void) {
+void canReceiveTask(RingBuffer_t* MsgRecieve) {
 	static unsigned int recvCnt = 0;
+	static uint16_t PrevCheckNumber = 0;
 
 	/* Check for RX pending */
 	if (HAL_CAN_GetRxFifoFillLevel(&canHandle, CAN_RX_FIFO0) == 0)
@@ -164,7 +226,7 @@ void canReceiveTask(void) {
 	recvCnt++;
 
 	/* Extract temperature */
-	int16_t temp = (rxData[1] << 8) | rxData[2];
+	int16_t checkNumber = (rxData[1] << 8) | rxData[2];
 	int16_t Head = rxHeader.StdId;
 
 	/* Update LCD */
@@ -175,7 +237,33 @@ void canReceiveTask(void) {
 	LCD_SetPrintPosition(15,1);
 	printf("Recv-Data: %02X %02X %02X %02X ",rxData[0], rxData[1], rxData[2], rxData[3]);
 	LCD_SetPrintPosition(16,1);
+	printf("Recv-Data: %c %c %c %c ",rxData[0], rxData[1], rxData[2], rxData[3]);
+	LCD_SetPrintPosition(17,1);
 	printf("Recv-Head: 0x%04X ",Head);
+
+	//If recieving a Begin
+
+	if(rxHeader.StdId == 0x001)
+	{
+		for(int i = 0; i < 8; i++)
+		{
+			ringBufferAppendOne(MsgRecieve, rxData[i]);
+		}
+	}
+
+	//If recieveing a letter send to uart
+	if(rxHeader.StdId == 0x003)
+	{
+		if(PrevCheckNumber + 1 == checkNumber)
+		{
+			ringBufferAppendOne(MsgRecieve, rxData[0]);
+			PrevCheckNumber = checkNumber;
+		}else
+		{
+			printf("Codation ERROR");
+		}
+	}
+
 }
 
 /*

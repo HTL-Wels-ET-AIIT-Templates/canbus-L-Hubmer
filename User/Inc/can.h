@@ -4,11 +4,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#include "ringbuffer.h"
 
 void canInitHardware(void);
 void canInit(void);
 void canSendTask(void);
-void canReceiveTask(void);
+void canReceiveTask(RingBuffer_t* MsgRecieve);
+void canSendBegin(char Sender[8]);
+void canSendEnd();
+void canSendLetter(char Letter, uint16_t check_number);
 
 #ifdef __cplusplus
 }

@@ -27,6 +27,7 @@
 #include "ts_calibration.h"
 #include "can.h"
 #include "cancpp.h"
+#include "uart.h"
 
 /* Private includes ----------------------------------------------------------*/
 
@@ -80,7 +81,9 @@ int main(void)
 
 	// ToDo: set up CAN peripherals
 	canInit();
-
+	RingBuffer_t MsgRecieve;
+	uint8_t MsgRecieveArray[256] = {0};
+	ringBufferInit(&MsgRecieve, MsgRecieveArray, 256);
 
 
 
@@ -93,10 +96,14 @@ int main(void)
 		// ToDo: send data over CAN when user button has been pressed
 		if(GetUserButtonPressed())
 		{
-			canSendLetter();
+			canSendBegin("Lukas");
+			canReceiveTask(&MsgRecieve);
+			canSendLetter('c', 1);
 			HAL_Delay(100);
 		}
-		canReceiveTask();
+		canReceiveTask(&MsgRecieve);
+		uartSendMsgIfAvailable(&MsgRecieve);
+		uartTask();
 		// ToDo: check if data has been received
 
 
