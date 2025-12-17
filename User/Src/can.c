@@ -95,10 +95,14 @@ void canSendTask(void) {
 	txHeader.DLC   = 8;
 
 	/* Data payload (temperature) */
-	txData[0] = 0x6B;      //
-	txData[1] = 0x00;   //
-	txData[2] = 0xB1;      // Low Byte
-	txData[3] = 0xE5; // High Byte
+	txData[0] = Name[0];      //
+	txData[1] = Name[1];   //
+	txData[2] = Name[2];      // Low Byte
+	txData[3] = Name[3]; // High Byte
+	txData[4] = Name[4];      //
+	txData[5] = Name[5];   //
+	txData[6] = Name[6];      // Low Byte
+	txData[7] = Name[7];
 
 	/* Send CAN frame */
 	if (HAL_CAN_AddTxMessage(&canHandle, &txHeader, txData, &txMailbox) == HAL_OK) {
@@ -115,6 +119,34 @@ void canSendTask(void) {
 	}
 }
 
+void canSendLetter(void) {
+	static unsigned int sendCnt = 0;
+	char Letter = 'c';
+
+	/* Prepare CAN header */
+	txHeader.StdId = 0x1001;
+	txHeader.IDE   = CAN_ID_STD;
+	txHeader.RTR   = CAN_RTR_DATA;
+	txHeader.DLC   = 1;
+
+	/* Data payload (temperature) */
+	txData[0] = Letter;      //
+
+
+	/* Send CAN frame */
+	if (HAL_CAN_AddTxMessage(&canHandle, &txHeader, txData, &txMailbox) == HAL_OK) {
+		sendCnt++;
+
+		/* Display send counter */
+		LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
+		LCD_SetPrintPosition(5,15);
+		printf("%5d", sendCnt);
+
+		/* Display temperature sent */
+		LCD_SetPrintPosition(9,1);
+		printf("Send-Data: %c",txData[0]);
+	}
+}
 /**
  * Task: Receive CAN messages if available
  */
@@ -178,7 +210,7 @@ static void initCanPeripheral(void) {
 	canHandle.Init.AutoRetransmission = ENABLE;
 	canHandle.Init.ReceiveFifoLocked = DISABLE;
 	canHandle.Init.TransmitFifoPriority = DISABLE;
-	canHandle.Init.Mode = CAN_MODE_NORMAL;
+	canHandle.Init.Mode = CAN_MODE_LOOPBACK;
 	canHandle.Init.SyncJumpWidth = CAN_SJW_1TQ;
 
 	canHandle.Init.TimeSeg1 = CAN_BS1_15TQ;

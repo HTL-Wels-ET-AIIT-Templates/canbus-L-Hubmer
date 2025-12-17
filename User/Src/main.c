@@ -93,7 +93,7 @@ int main(void)
 		// ToDo: send data over CAN when user button has been pressed
 		if(GetUserButtonPressed())
 		{
-			canSendTask();
+			canSendLetter();
 			HAL_Delay(100);
 		}
 		canReceiveTask();
