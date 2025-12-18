@@ -55,6 +55,7 @@ static uint8_t CanRxMsgByte7_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
 /* Private function prototypes -----------------------------------------------*/
 static void initGpio(void);
 static void initCanPeripheral(void);
+void canSaveToBuffer();
 
 /**
  * Initialize GPIO and CAN peripheral
@@ -107,6 +108,8 @@ void canInit(void) {
 
 	LCD_SetPrintPosition(30,1);
 	printf("Bit-Timing-Register: 0x%lx", CAN1->BTR);
+
+
 
 	/* ----------------------
 	 * Initialize DS18B20
@@ -380,6 +383,14 @@ static void initCanPeripheral(void) {
 
 	if (HAL_CAN_Start(&canHandle) != HAL_OK)
 		Error_Handler();
+
+	if (HAL_CAN_ActivateNotification(&canHandle, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+	{
+		printf("/* Notification Error */\r\n");
+		Error_Handler();
+	}
+	HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 5, 0);
+	HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
 }
 
 /**
@@ -395,22 +406,13 @@ void CAN1_RX0_IRQHandler(void) {
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	//Save Message in Ringbuffer
-	printf("AAAAAAAAA");
-	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, rxData);
-	ringBufferAppendOne(&CanRxMsgStdId, rxHeader.StdId);
-	ringBufferAppendOne(&CanRxMsgByte0, rxData[0]);
-	ringBufferAppendOne(&CanRxMsgByte1, rxData[1]);
-	ringBufferAppendOne(&CanRxMsgByte2, rxData[2]);
-	ringBufferAppendOne(&CanRxMsgByte3, rxData[3]);
-	ringBufferAppendOne(&CanRxMsgByte4, rxData[4]);
-	ringBufferAppendOne(&CanRxMsgByte5, rxData[5]);
-	ringBufferAppendOne(&CanRxMsgByte6, rxData[6]);
-	ringBufferAppendOne(&CanRxMsgByte7, rxData[7]);
+	printf("BBBBBBBB");
+	canSaveToBuffer();
 
 
 }
 
-void canRecieve() {
+void canSaveToBuffer() {
 	//Save Message in Ringbuffer
 
 	if(HAL_CAN_GetRxMessage(&canHandle, CAN_RX_FIFO0, &rxHeader, rxData) != HAL_OK)

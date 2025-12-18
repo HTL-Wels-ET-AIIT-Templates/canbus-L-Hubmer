@@ -98,17 +98,17 @@ int main(void)
 		if(GetUserButtonPressed())
 		{
 			canSendBegin("Lukas");
-			canRecieve();
+
 			canSendLetter('c', 1);
-			canRecieve();
+
 			canSendLetter('a', 2);
-			canRecieve();
+
 			canSendLetter('n', 3);
-			canRecieve();
+
 			canSendLetter('b', 4);
-			canRecieve();
+
 			canSendEnd();
-			canRecieve();
+
 			HAL_Delay(100);
 		}
 		canReceiveTask(&MsgRecieve);
@@ -123,7 +123,7 @@ int main(void)
 		LCD_SetTextColor(LCD_COLOR_RED);
 		LCD_SetPrintPosition(0, 18);
 		printf("   Timer: %.1f", cnt/1000.0);
-		canRecieve();
+
 
 		// test touch interface
 		int x, y;
