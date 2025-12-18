@@ -313,7 +313,6 @@ void canReceiveTask(RingBuffer_t* MsgRecieve) {
 		if(PrevCheckNumber + 1 == checkNumber)
 		{
 			ringBufferAppendOne(MsgRecieve, RxDataByte[0]);
-			ringBufferAppendOne(MsgRecieve, '#');
 			PrevCheckNumber = checkNumber;
 		}else
 		{
@@ -384,6 +383,7 @@ static void initCanPeripheral(void) {
 	if (HAL_CAN_Start(&canHandle) != HAL_OK)
 		Error_Handler();
 
+	//Activate Rx Interrupt
 	if (HAL_CAN_ActivateNotification(&canHandle, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
 	{
 		printf("/* Notification Error */\r\n");
@@ -406,7 +406,6 @@ void CAN1_RX0_IRQHandler(void) {
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
 	//Save Message in Ringbuffer
-	printf("BBBBBBBB");
 	canSaveToBuffer();
 
 
@@ -417,7 +416,6 @@ void canSaveToBuffer() {
 
 	if(HAL_CAN_GetRxMessage(&canHandle, CAN_RX_FIFO0, &rxHeader, rxData) != HAL_OK)
 		return;
-	printf("AAAAAAAAA");
 	ringBufferAppendOne(&CanRxMsgStdId, rxHeader.StdId);
 	ringBufferAppendOne(&CanRxMsgByte0, rxData[0]);
 	ringBufferAppendOne(&CanRxMsgByte1, rxData[1]);
