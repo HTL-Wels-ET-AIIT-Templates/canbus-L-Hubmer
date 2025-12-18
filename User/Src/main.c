@@ -81,6 +81,7 @@ int main(void)
 
 	// ToDo: set up CAN peripherals
 	canInit();
+	uartInit();
 	RingBuffer_t MsgRecieve;
 	uint8_t MsgRecieveArray[256] = {0};
 	ringBufferInit(&MsgRecieve, MsgRecieveArray, 256);
@@ -91,14 +92,23 @@ int main(void)
 	while (1)
 	{
 		//execute main loop every 100ms
-		HAL_Delay(10);
+		//		HAL_Delay(10);
 
 		// ToDo: send data over CAN when user button has been pressed
 		if(GetUserButtonPressed())
 		{
 			canSendBegin("Lukas");
-			canReceiveTask(&MsgRecieve);
+			canRecieve();
 			canSendLetter('c', 1);
+			canRecieve();
+			canSendLetter('a', 2);
+			canRecieve();
+			canSendLetter('n', 3);
+			canRecieve();
+			canSendLetter('b', 4);
+			canRecieve();
+			canSendEnd();
+			canRecieve();
 			HAL_Delay(100);
 		}
 		canReceiveTask(&MsgRecieve);
@@ -113,6 +123,7 @@ int main(void)
 		LCD_SetTextColor(LCD_COLOR_RED);
 		LCD_SetPrintPosition(0, 18);
 		printf("   Timer: %.1f", cnt/1000.0);
+		canRecieve();
 
 		// test touch interface
 		int x, y;

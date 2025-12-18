@@ -19,6 +19,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 CAN_HandleTypeDef canHandle;
+uint8_t OtherTransmissionInProgress = 0;
 
 /* TX/RX buffers */
 static CAN_TxHeaderTypeDef txHeader;
@@ -28,6 +29,29 @@ static uint32_t txMailbox;
 static CAN_RxHeaderTypeDef rxHeader;
 static uint8_t  rxData[8];
 
+#define CAN_RX_MSG_BUFFER_LEN 256
+
+static RingBuffer_t CanRxMsgStdId;
+static RingBuffer_t CanRxMsgByte0;
+static RingBuffer_t CanRxMsgByte1;
+static RingBuffer_t CanRxMsgByte2;
+static RingBuffer_t CanRxMsgByte3;
+static RingBuffer_t CanRxMsgByte4;
+static RingBuffer_t CanRxMsgByte5;
+static RingBuffer_t CanRxMsgByte6;
+static RingBuffer_t CanRxMsgByte7;
+
+static uint8_t CanRxMsgStdId_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte0_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte1_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte2_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte3_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte4_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte5_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte6_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+static uint8_t CanRxMsgByte7_Array[CAN_RX_MSG_BUFFER_LEN] = {0};
+
+
 /* Private function prototypes -----------------------------------------------*/
 static void initGpio(void);
 static void initCanPeripheral(void);
@@ -35,6 +59,7 @@ static void initCanPeripheral(void);
 /**
  * Initialize GPIO and CAN peripheral
  */
+
 void canInitHardware(void) {
 	initGpio();
 	initCanPeripheral();
@@ -46,6 +71,17 @@ void canInitHardware(void) {
 void canInit(void) {
 
 	canInitHardware();
+
+	ringBufferInit(&CanRxMsgStdId, CanRxMsgStdId_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte0, CanRxMsgByte0_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte1, CanRxMsgByte1_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte2, CanRxMsgByte2_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte3, CanRxMsgByte3_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte4, CanRxMsgByte4_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte5, CanRxMsgByte5_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte6, CanRxMsgByte6_Array, CAN_RX_MSG_BUFFER_LEN);
+	ringBufferInit(&CanRxMsgByte7, CanRxMsgByte7_Array, CAN_RX_MSG_BUFFER_LEN);
+
 
 	LCD_SetFont(&Font12);
 	LCD_SetColors(LCD_COLOR_WHITE, LCD_COLOR_BLACK);
@@ -213,23 +249,30 @@ void canSendEnd() {
  */
 void canReceiveTask(RingBuffer_t* MsgRecieve) {
 	static unsigned int recvCnt = 0;
-	static uint16_t PrevCheckNumber = 0;
+	static uint16_t PrevCheckNumber;
 
 	/* Check for RX pending */
-	if (HAL_CAN_GetRxFifoFillLevel(&canHandle, CAN_RX_FIFO0) == 0)
-		return;
-
-	/* Read message */
-	if (HAL_CAN_GetRxMessage(&canHandle, CAN_RX_FIFO0, &rxHeader, rxData) != HAL_OK)
+	if (ringBufferLen(&CanRxMsgByte0) == 0)
 		return;
 
 	recvCnt++;
 
-	/* Extract temperature */
-	int16_t checkNumber = (rxData[1] << 8) | rxData[2];
-	int16_t Head = rxHeader.StdId;
+	uint8_t RxDataStdId = ringBufferGetOne(&CanRxMsgStdId);
+	uint8_t RxDataByte[8];
+	RxDataByte[0] = ringBufferGetOne(&CanRxMsgByte0);
+	RxDataByte[1] = ringBufferGetOne(&CanRxMsgByte1);
+	RxDataByte[2] = ringBufferGetOne(&CanRxMsgByte2);
+	RxDataByte[3] = ringBufferGetOne(&CanRxMsgByte3);
+	RxDataByte[4] = ringBufferGetOne(&CanRxMsgByte4);
+	RxDataByte[5] = ringBufferGetOne(&CanRxMsgByte5);
+	RxDataByte[6] = ringBufferGetOne(&CanRxMsgByte6);
+	RxDataByte[7] = ringBufferGetOne(&CanRxMsgByte7);
 
-	/* Update LCD */
+	/* Extract temperature */
+	int16_t checkNumber = (RxDataByte[1] << 8) | RxDataByte[2];
+	int16_t Head = RxDataStdId;
+
+
 	LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
 	LCD_SetPrintPosition(7,15);
 	printf("%5d", recvCnt);
@@ -243,24 +286,36 @@ void canReceiveTask(RingBuffer_t* MsgRecieve) {
 
 	//If recieving a Begin
 
-	if(rxHeader.StdId == 0x001)
+	if(RxDataStdId == 0x001)
 	{
+		ringBufferAppendOne(MsgRecieve, '<');
 		for(int i = 0; i < 8; i++)
 		{
-			ringBufferAppendOne(MsgRecieve, rxData[i]);
+			ringBufferAppendOne(MsgRecieve, RxDataByte[i]);
 		}
+		ringBufferAppendOne(MsgRecieve, '>');
+		ringBufferAppendOne(MsgRecieve, ':');
+		ringBufferAppendOne(MsgRecieve, ' ');
+	}
+	//If recieving an End
+	if(RxDataStdId == 0x002)
+	{
+		PrevCheckNumber = 0;
+		ringBufferAppendOne(MsgRecieve, 13);
 	}
 
 	//If recieveing a letter send to uart
-	if(rxHeader.StdId == 0x003)
+	if(RxDataStdId == 0x003)
 	{
 		if(PrevCheckNumber + 1 == checkNumber)
 		{
-			ringBufferAppendOne(MsgRecieve, rxData[0]);
+			ringBufferAppendOne(MsgRecieve, RxDataByte[0]);
+			ringBufferAppendOne(MsgRecieve, '#');
 			PrevCheckNumber = checkNumber;
 		}else
 		{
-			printf("Codation ERROR");
+			LCD_SetPrintPosition(22,1);
+			printf("Lost Letter ERROR");
 		}
 	}
 
@@ -332,11 +387,42 @@ static void initCanPeripheral(void) {
  */
 void CAN1_RX0_IRQHandler(void) {
 	HAL_CAN_IRQHandler(&canHandle);
+
 }
 
 /**
  * FIFO0 message pending callback (unused)
  */
 void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan) {
-	// handled in main loop
+	//Save Message in Ringbuffer
+	printf("AAAAAAAAA");
+	HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rxHeader, rxData);
+	ringBufferAppendOne(&CanRxMsgStdId, rxHeader.StdId);
+	ringBufferAppendOne(&CanRxMsgByte0, rxData[0]);
+	ringBufferAppendOne(&CanRxMsgByte1, rxData[1]);
+	ringBufferAppendOne(&CanRxMsgByte2, rxData[2]);
+	ringBufferAppendOne(&CanRxMsgByte3, rxData[3]);
+	ringBufferAppendOne(&CanRxMsgByte4, rxData[4]);
+	ringBufferAppendOne(&CanRxMsgByte5, rxData[5]);
+	ringBufferAppendOne(&CanRxMsgByte6, rxData[6]);
+	ringBufferAppendOne(&CanRxMsgByte7, rxData[7]);
+
+
+}
+
+void canRecieve() {
+	//Save Message in Ringbuffer
+
+	if(HAL_CAN_GetRxMessage(&canHandle, CAN_RX_FIFO0, &rxHeader, rxData) != HAL_OK)
+		return;
+	printf("AAAAAAAAA");
+	ringBufferAppendOne(&CanRxMsgStdId, rxHeader.StdId);
+	ringBufferAppendOne(&CanRxMsgByte0, rxData[0]);
+	ringBufferAppendOne(&CanRxMsgByte1, rxData[1]);
+	ringBufferAppendOne(&CanRxMsgByte2, rxData[2]);
+	ringBufferAppendOne(&CanRxMsgByte3, rxData[3]);
+	ringBufferAppendOne(&CanRxMsgByte4, rxData[4]);
+	ringBufferAppendOne(&CanRxMsgByte5, rxData[5]);
+	ringBufferAppendOne(&CanRxMsgByte6, rxData[6]);
+	ringBufferAppendOne(&CanRxMsgByte7, rxData[7]);
 }

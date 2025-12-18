@@ -25,6 +25,7 @@
 static UART_HandleTypeDef uartHandle;
 static volatile char rxChar = 0;
 char Tc_String[32];
+bool LetterRecieveFlag = 0;
 
 RingBuffer_t USART6_Recieve;
 uint8_t USART6_Recieve_Data[UART_DATA_SIZE];
@@ -100,13 +101,22 @@ void uartTask(){
 
 	if(ringBufferLen(&USART6_Recieve) > 0)
 	{
+		//Displays Typed Cahacter in Console
+		if(LetterRecieveFlag == 1)
+		{
+			uartSendByte(rxChar);
+			LetterRecieveFlag = 0;
+		}
+		//If enter is Pressed Send Message
 		if(rxChar == 13)
 		{
 			//Start Transmission
 			canSendBegin("Lukas");
 			for(int i = 1; ringBufferLen(&USART6_Recieve) > 0; i++)
 			{
-				canSendLetter(ringBufferGetOne(&USART6_Recieve), i);
+				char LetterToSend = ringBufferGetOne(&USART6_Recieve);
+				uartSendByte(LetterToSend);
+				canSendLetter(LetterToSend, i);
 			}
 			canSendEnd();
 
@@ -225,6 +235,7 @@ void USART6_IRQHandler(void)
 		uint8_t rx = uartHandle.Instance->DR;
 		rxChar = rx;
 		ringBufferAppendOne(&USART6_Recieve, rxChar);
+		LetterRecieveFlag = 1;
 	}
 }
 

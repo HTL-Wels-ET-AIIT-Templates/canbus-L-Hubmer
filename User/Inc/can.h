@@ -13,6 +13,7 @@ void canReceiveTask(RingBuffer_t* MsgRecieve);
 void canSendBegin(char Sender[8]);
 void canSendEnd();
 void canSendLetter(char Letter, uint16_t check_number);
+void canRecieve();
 
 #ifdef __cplusplus
 }
