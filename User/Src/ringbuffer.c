@@ -106,6 +106,14 @@ void ringBufferAppendOne(RingBuffer_t *buffer, uint8_t data){
 }
 
 /**
+ * Delete one byte from the ring buffer.
+ * @param buffer "context" struct
+ */
+void ringBufferDeleteOne(RingBuffer_t *buffer){
+   buffer->tail = (buffer->tail - 1) & buffer->sizeMask;
+}
+
+/**
  * Append multiple bytes to the ring buffer. Function does not check if free space is available!
  * @param buffer "context" struct
  * @param data array of bytes to be stored in the ring buffer

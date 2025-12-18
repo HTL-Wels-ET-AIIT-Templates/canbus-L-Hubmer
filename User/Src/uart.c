@@ -106,10 +106,18 @@ void uartTask(){
 		{
 			uartSendByte(rxChar);
 			LetterRecieveFlag = 0;
+			if(rxChar == 8)
+			{
+				ringBufferDeleteOne(&USART6_Recieve);
+				ringBufferDeleteOne(&USART6_Recieve);
+			}
 		}
+		//If backspace is sendt
+
 		//If enter is Pressed Send Message
 		if(rxChar == 13)
 		{
+			ringBufferDeleteOne(&USART6_Recieve);
 			//Start Transmission
 			canSendBegin("Lukas");
 			for(int i = 1; ringBufferLen(&USART6_Recieve) > 0; i++)
@@ -144,7 +152,7 @@ void uartTask(){
 			printf("%c",rxChar);
 			break;
 		}
-		*/
+		 */
 	}
 }
 
