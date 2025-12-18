@@ -15,7 +15,7 @@
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
 void uartInit(void);
-void uartTask();
+void uartTask(char Sender[8]);
 void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer);
 
 #endif // UART_H

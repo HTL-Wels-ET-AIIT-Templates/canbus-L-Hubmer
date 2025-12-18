@@ -8,7 +8,6 @@ extern "C" {
 
 void canInitHardware(void);
 void canInit(void);
-void canSendTask(void);
 void canReceiveTask(RingBuffer_t* MsgRecieve);
 void canSendBegin(char Sender[8]);
 void canSendEnd();

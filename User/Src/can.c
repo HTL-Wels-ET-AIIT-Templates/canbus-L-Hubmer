@@ -121,46 +121,12 @@ void canInit(void) {
 /**
  * Task: Send a CAN message every cycle
  */
-void canSendTask(void) {
-	static unsigned int sendCnt = 0;
-	char Name[8] = "NAME";
 
-	/* Read temperature from DS18B20 (°C × 100) */
-	int16_t tempScaled = 0x5432; //ds18b20_readTemp();
-	//ds18b20_startMeasure();     // Start next measurement
-	/* Prepare CAN header */
-	txHeader.StdId = 4;
-	txHeader.IDE   = CAN_ID_STD;
-	txHeader.RTR   = CAN_RTR_DATA;
-	txHeader.DLC   = 8;
-
-	/* Data payload (temperature) */
-	txData[0] = Name[0];      //
-	txData[1] = Name[1];   //
-	txData[2] = Name[2];      // Low Byte
-	txData[3] = Name[3]; // High Byte
-	txData[4] = Name[4];      //
-	txData[5] = Name[5];   //
-	txData[6] = Name[6];      // Low Byte
-	txData[7] = Name[7];
-
-	/* Send CAN frame */
-	if (HAL_CAN_AddTxMessage(&canHandle, &txHeader, txData, &txMailbox) == HAL_OK) {
-		sendCnt++;
-
-		/* Display send counter */
-		LCD_SetColors(LCD_COLOR_GREEN, LCD_COLOR_BLACK);
-		LCD_SetPrintPosition(5,15);
-		printf("%5d", sendCnt);
-
-		/* Display temperature sent */
-		LCD_SetPrintPosition(9,1);
-		printf("Send-Data: %02X %02X %02X %02X ",txData[0], txData[1], txData[2], txData[3]);
-	}
-}
 
 void canSendLetter(char Letter, uint16_t check_number) {
 	static unsigned int sendCnt = 0;
+
+//	while(OtherTransmissionInProgress)	{};
 
 	/* Prepare CAN header */
 	txHeader.StdId = 0x003;
@@ -192,6 +158,7 @@ void canSendLetter(char Letter, uint16_t check_number) {
 
 void canSendBegin(char Sender[8]) {
 	static unsigned int sendCnt = 0;
+//	while(OtherTransmissionInProgress){};
 
 	/* Prepare CAN header */
 	txHeader.StdId = 0x001;
@@ -222,6 +189,7 @@ void canSendBegin(char Sender[8]) {
 }
 void canSendEnd() {
 	static unsigned int sendCnt = 0;
+//	while(OtherTransmissionInProgress){};
 
 	/* Prepare CAN header */
 	txHeader.StdId = 0x002;
@@ -291,6 +259,7 @@ void canReceiveTask(RingBuffer_t* MsgRecieve) {
 
 	if(RxDataStdId == 0x001)
 	{
+		ringBufferAppendOne(MsgRecieve, 0x0D);
 		ringBufferAppendOne(MsgRecieve, '<');
 		for(int i = 0; i < 8; i++)
 		{
@@ -304,7 +273,7 @@ void canReceiveTask(RingBuffer_t* MsgRecieve) {
 	if(RxDataStdId == 0x002)
 	{
 		PrevCheckNumber = 0;
-		ringBufferAppendOne(MsgRecieve, 13);
+		ringBufferAppendOne(MsgRecieve, 0x0D);
 	}
 
 	//If recieveing a letter send to uart
@@ -425,4 +394,10 @@ void canSaveToBuffer() {
 	ringBufferAppendOne(&CanRxMsgByte5, rxData[5]);
 	ringBufferAppendOne(&CanRxMsgByte6, rxData[6]);
 	ringBufferAppendOne(&CanRxMsgByte7, rxData[7]);
+
+	if(rxHeader.StdId == 0x001)
+		OtherTransmissionInProgress = 1;
+
+	if(rxHeader.StdId == 0x003)
+		OtherTransmissionInProgress = 0;
 }

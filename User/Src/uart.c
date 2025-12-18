@@ -72,31 +72,55 @@ void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer)
 
 		switch(nextChar)
 		{
-		case 13:
-			break;
-
-		case 228:
+		case 164:
 			printf("ae");
 			break;
 
-		case 246:
+		case 182:
 			printf("oe");
 			break;
 
-		case 252:
+		case 188:
 			printf("ae");
 			break;
 
 		default:
-			printf("%c  ",nextChar);
+			printf("%i  ",nextChar);
 			break;
 		}
-		uartSendByte(nextChar);
+
+		switch(nextChar)
+		{
+		case 13:
+			break;
+
+		case 164:
+			uartSendByte(0x08);
+			uartSendByte('a');
+			uartSendByte('e');
+			break;
+
+		case 182:
+			uartSendByte(0x08);
+			uartSendByte('o');
+			uartSendByte('e');
+			break;
+
+		case 188:
+			uartSendByte(0x08);
+			uartSendByte('u');
+			uartSendByte('e');
+			break;
+
+		default:
+			uartSendByte(nextChar);
+			break;
+		}
+
 	}
-	HAL_Delay(100);
 
 }
-void uartTask(){
+void uartTask(char Sender[8]){
 	// TODO: What has to be done in our main loop?
 
 	if(ringBufferLen(&USART6_Recieve) > 0)
@@ -104,26 +128,52 @@ void uartTask(){
 		//Displays Typed Cahacter in Console
 		if(LetterRecieveFlag == 1)
 		{
-			uartSendByte(rxChar);
+			switch(rxChar)
+					{
+					case 13:
+						break;
+
+					case 164:
+						uartSendByte(0x08);
+						uartSendByte('a');
+						uartSendByte('e');
+						break;
+
+					case 182:
+						uartSendByte(0x08);
+						uartSendByte('o');
+						uartSendByte('e');
+						break;
+
+					case 188:
+						uartSendByte(0x08);
+						uartSendByte('u');
+						uartSendByte('e');
+						break;
+
+					default:
+						uartSendByte(rxChar);
+						break;
+					};
 			LetterRecieveFlag = 0;
+			//If backspace is sent
 			if(rxChar == 8)
 			{
 				ringBufferDeleteOne(&USART6_Recieve);
 				ringBufferDeleteOne(&USART6_Recieve);
 			}
 		}
-		//If backspace is sendt
+
 
 		//If enter is Pressed Send Message
 		if(rxChar == 13)
 		{
 			ringBufferDeleteOne(&USART6_Recieve);
 			//Start Transmission
-			canSendBegin("Lukas");
+			canSendBegin(Sender);
 			for(int i = 1; ringBufferLen(&USART6_Recieve) > 0; i++)
 			{
 				char LetterToSend = ringBufferGetOne(&USART6_Recieve);
-				uartSendByte(LetterToSend);
 				canSendLetter(LetterToSend, i);
 			}
 			canSendEnd();
