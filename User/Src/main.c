@@ -113,7 +113,7 @@ int main(void)
 		}
 		canReceiveTask(&MsgRecieve);
 		uartSendMsgIfAvailable(&MsgRecieve);
-		uartTask("Mario");
+		uartTask("Mario", canCheckForOtherTx());
 		// ToDo: check if data has been received
 
 

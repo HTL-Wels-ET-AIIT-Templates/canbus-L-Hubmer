@@ -68,6 +68,11 @@ void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer)
 		char nextChar = ringBufferGetOne(MsgBuffer);
 
 		if(nextChar == 0)
+		{
+			return;
+		}
+
+		if(nextChar == 13)
 			return;
 
 		switch(nextChar)
@@ -91,9 +96,6 @@ void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer)
 
 		switch(nextChar)
 		{
-		case 13:
-			break;
-
 		case 164:
 			uartSendByte(0x08);
 			uartSendByte('a');
@@ -120,7 +122,7 @@ void uartSendMsgIfAvailable(RingBuffer_t* MsgBuffer)
 	}
 
 }
-void uartTask(char Sender[8]){
+void uartTask(char Sender[8], char TxInProg){
 	// TODO: What has to be done in our main loop?
 
 	if(ringBufferLen(&USART6_Recieve) > 0)
@@ -129,32 +131,30 @@ void uartTask(char Sender[8]){
 		if(LetterRecieveFlag == 1)
 		{
 			switch(rxChar)
-					{
-					case 13:
-						break;
+			{
 
-					case 164:
-						uartSendByte(0x08);
-						uartSendByte('a');
-						uartSendByte('e');
-						break;
+			case 164:
+				uartSendByte(0x08);
+				uartSendByte('a');
+				uartSendByte('e');
+				break;
 
-					case 182:
-						uartSendByte(0x08);
-						uartSendByte('o');
-						uartSendByte('e');
-						break;
+			case 182:
+				uartSendByte(0x08);
+				uartSendByte('o');
+				uartSendByte('e');
+				break;
 
-					case 188:
-						uartSendByte(0x08);
-						uartSendByte('u');
-						uartSendByte('e');
-						break;
+			case 188:
+				uartSendByte(0x08);
+				uartSendByte('u');
+				uartSendByte('e');
+				break;
 
-					default:
-						uartSendByte(rxChar);
-						break;
-					};
+			default:
+				uartSendByte(rxChar);
+				break;
+			};
 			LetterRecieveFlag = 0;
 			//If backspace is sent
 			if(rxChar == 8)
@@ -166,7 +166,7 @@ void uartTask(char Sender[8]){
 
 
 		//If enter is Pressed Send Message
-		if(rxChar == 13)
+		if(rxChar == 13 && !TxInProg)
 		{
 			ringBufferDeleteOne(&USART6_Recieve);
 			//Start Transmission

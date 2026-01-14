@@ -13,6 +13,7 @@ void canSendBegin(char Sender[8]);
 void canSendEnd();
 void canSendLetter(char Letter, uint16_t check_number);
 void canRecieve();
+char canCheckForOtherTx();
 
 #ifdef __cplusplus
 }

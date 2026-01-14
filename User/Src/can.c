@@ -259,7 +259,9 @@ void canReceiveTask(RingBuffer_t* MsgRecieve) {
 
 	if(RxDataStdId == 0x001)
 	{
-		ringBufferAppendOne(MsgRecieve, 0x0D);
+	//	ringBufferAppendOne(MsgRecieve, '\n');
+		//ringBufferAppendOne(MsgRecieve, 'a');
+	//	ringBufferAppendOne(MsgRecieve, '\n');
 		ringBufferAppendOne(MsgRecieve, '<');
 		for(int i = 0; i < 8; i++)
 		{
@@ -273,7 +275,7 @@ void canReceiveTask(RingBuffer_t* MsgRecieve) {
 	if(RxDataStdId == 0x002)
 	{
 		PrevCheckNumber = 0;
-		ringBufferAppendOne(MsgRecieve, 0x0D);
+		ringBufferAppendOne(MsgRecieve, '\n');
 	}
 
 	//If recieveing a letter send to uart
@@ -324,7 +326,7 @@ static void initCanPeripheral(void) {
 	canHandle.Init.AutoRetransmission = ENABLE;
 	canHandle.Init.ReceiveFifoLocked = DISABLE;
 	canHandle.Init.TransmitFifoPriority = DISABLE;
-	canHandle.Init.Mode = CAN_MODE_LOOPBACK;
+	canHandle.Init.Mode = CAN_MODE_NORMAL;
 	canHandle.Init.SyncJumpWidth = CAN_SJW_1TQ;
 
 	canHandle.Init.TimeSeg1 = CAN_BS1_15TQ;
@@ -400,4 +402,8 @@ void canSaveToBuffer() {
 
 	if(rxHeader.StdId == 0x003)
 		OtherTransmissionInProgress = 0;
+}
+char canCheckForOtherTx()
+{
+	return OtherTransmissionInProgress;
 }
